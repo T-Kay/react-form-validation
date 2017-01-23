@@ -9,12 +9,14 @@ export default class Input extends Component {
     validaters: PropTypes.arrayOf(PropTypes.object),
     errors: PropTypes.arrayOf(PropTypes.object),
     onChange: PropTypes.func.isRequired,
-    onValidated: PropTypes.func.isRequired,
+    onValidated: PropTypes.func,
   }
 
   static defaultProps = {
     type: 'text',
+    validaters: [],
     errors: [],
+    onValidated: () => {},
   }
 
   componentWillMount() {

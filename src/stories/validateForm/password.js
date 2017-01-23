@@ -12,7 +12,7 @@ export default class Password extends Component {
     name: PropTypes.string.isRequired,
     confirmName: PropTypes.string,
     label: PropTypes.string.isRequired,
-    confirmLabel: PropTypes.stirng,
+    confirmLabel: PropTypes.string,
     type: PropTypes.string,
     validaters: PropTypes.arrayOf(PropTypes.object),
     confirmValidaters: PropTypes.arrayOf(PropTypes.object),
@@ -22,50 +22,64 @@ export default class Password extends Component {
   }
 
   static defaultProps = {
-    errors: [],
+    errors: {},
   }
 
-  componentWillMount() {
-    this.setState(
-      {
-        errors: this.props.errors,
-        value: ''
+  static rejectError(errors, key) {
+    return _.reject(errors, { name: key });
+  }
+
+  static filterError(errors, key) {
+    return _.filter(errors, { name: key });
+  }
+
+  setErrors(errors) {
+    this.setState({
+      errors: {
+          [Keys.MAIN]: Password.rejectError(errors, Keys.CONFIRM),
+          [Keys.CONFIRM]: Password.filterError(errors, Keys.CONFIRM),
+        }
       });
   }
 
+  componentWillMount() {
+    this.setState({ value: '' });
+    this.setErrors(this.props.errors);
+  }
+
   componentWillReceiveProps(nextProps) {
-    this.setState({ errors: nextProps.errors });
+    this.setErrors(nextProps.errors);
   }
 
   mergeError(errors) {
     return _.uniqBy(Object.assign({}, this.state.errors, errors), 'message');
   }
 
-  filterError() {
-    return _.reject(this.state.errors, { name: 'confirm' });
-  }
-
-  filterConfirmError() {
-    return _.filter(this.state.errors, { name: 'confirm' });
-  }
-
   handleOnChange(value) {
-    this.props.onChange(value);
     this.setState({ value });
+    this.props.onChange(value);
   }
 
   handleConfirmOnChange(value) {
-    const errors = mergeError(this.props.confirmValidaters.map(
-      validater => validater.validaterFunc(this.state.value, value, validater.options),
-    ));
-    this.props.onValidated(errors);
-    this.setState({ errors });
+    const errors = this.props.confirmValidaters.map(validater => 
+      validater.validaterFunc(this.state.value, value, validater.options)
+    );
+    this.props.onValidated(this.mergeError(errors));
+    this.setState({
+      errors: {
+        [Keys.MAIN]: this.state.errors[Keys.MAIN],
+        [Keys.CONFIRM]: errors,
+      }
+    });
   }
 
   handleOnValidated(errors) {
-    const allError = mergeError(errors);
-    this.props.onValidated(allError);
-    this.setState({ errors: allError });
+    this.setState({
+      errors: {
+        [Keys.MAIN]: errors,
+        [Keys.CONFIRM]: this.state.errors[Keys.CONFIRM],
+      }
+    });
   }
 
   render() {
@@ -73,14 +87,16 @@ export default class Password extends Component {
       <div>
         <Input
           name={this.props.name}
+          label={this.props.label}
           validaters={this.props.validaters}
-          errors={this.filterError()}
+          errors={this.state.errors[Keys.MAIN]}
           onChange={value => this.handleOnChange(value)}
           onValidated={(errors) => this.handleOnValidated(errors)}
         />
         <Input
           name={this.props.confirmName}
-          errors={this.filterConfirmError()}
+          label={this.props.confirmLabel}
+          errors={this.state.errors[Keys.CONFIRM]}
           onChange={value => this.handleConfirmOnChange(value)}
         />
       </div>
